@@ -61,16 +61,11 @@ class HobbyTester:
             self.record = digitalocean.Record(token=self.token, id=record_id)
 
         self.user_data = (
-            f"#!/bin/bash \n"
+            "#!/bin/bash \n"
             "mkdir hobby \n"
             "cd hobby \n"
             "sed -i \"s/#\\$nrconf{restart} = 'i';/\\$nrconf{restart} = 'a';/g\" /etc/needrestart/needrestart.conf \n"
-            "git clone https://github.com/PostHog/posthog.git \n"
-            "cd posthog \n"
-            f"git checkout {self.branch} \n"
-            "cd .. \n"
-            f"chmod +x posthog/bin/deploy-hobby \n"
-            f"./posthog/bin/deploy-hobby {self.release_tag} {self.hostname} 1 \n"
+            f"/bin/bash -c $(curl -fsSL https://raw.githubusercontent.com/posthog/posthog/HEAD/bin/deploy-hobby) {self.release_tag} {self.hostname} 1 \n"
         )
 
     def block_until_droplet_is_started(self):
