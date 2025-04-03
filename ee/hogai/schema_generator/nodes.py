@@ -92,7 +92,7 @@ class SchemaGeneratorNode(AssistantNode, Generic[Q]):
                 return PartialAssistantState(
                     messages=[
                         FailureMessage(
-                            content=f"Oops! It looks like I’m having trouble generating this {self.INSIGHT_NAME} insight. Could you please try again?"
+                            content=f"Oops! It looks like I'm having trouble generating this {self.INSIGHT_NAME} insight. Could you please try again?"
                         )
                     ],
                     intermediate_steps=[],

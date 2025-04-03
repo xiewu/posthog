@@ -47,7 +47,8 @@ export type ThreadMessage = RootAssistantMessage & {
 
 const FAILURE_MESSAGE: FailureMessage & ThreadMessage = {
     type: AssistantMessageType.Failure,
-    content: 'Oops! It looks like I’m having trouble answering this. Could you please try again?',
+    content:
+        "It looks like I'm having trouble answering this. Could you please try again first? The PostHog team have been notified about the issue.",
     status: 'completed',
 }
 
