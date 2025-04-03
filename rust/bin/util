@@ -1,5 +1,8 @@
 # sourced by migration scripts
 
+SQLX_CLI_VERSION="0.8.3"
+POSTHOG_DOCKER_DB_CONTAINER_NAME="posthog-db-1"
+
 function log() {
   set +x
   if [[ "${1:-}" == "--err" ]]; then
@@ -11,3 +14,20 @@ function log() {
   set -x
 }
 
+function check_docker_compose_up() {
+  log "Checking on Docker Compose and DB container: ${POSTHOG_DOCKER_DB_CONTAINER_NAME}..."
+
+  if [[ -z "$(docker ps -q -f "name=${POSTHOG_DOCKER_DB_CONTAINER_NAME}")" ]] ; then
+    log --err "posthog repo root docker-compose must be UP prior to running $(realpath $0)"
+    exit 1
+  fi
+}
+
+function check_install_pinned_sqlx_cli() {
+  log "Checking that SQLX CLI tool is installed at version ${SQLX_CLI_VERSION}..."
+
+  if ! which sqlx; then
+    log "Installing SQLX CLI tool..."
+    cargo install sqlx-cli --version "$SQLX_CLI_VERSION"
+  fi
+}
