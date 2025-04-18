@@ -6,7 +6,7 @@ use common_kafka::kafka_consumer::SingleTopicConsumer;
 use futures::future::ready;
 use property_defs_rs::{
     api::v1::query::Manager, api::v1::routing::apply_routes, app_context::AppContext,
-    config::Config, update_consumer_loop, update_producer_loop,
+    config::Config, types::TeamCache, update_consumer_loop, update_producer_loop,
 };
 
 use quick_cache::sync::Cache;
@@ -86,8 +86,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let (tx, rx) = mpsc::channel(config.update_batch_size * config.channel_slots_per_worker);
 
     let cache = Cache::new(config.cache_capacity);
-
     let cache = Arc::new(cache);
+
+    let team_props_cache = TeamCache::new(1000000, 64, 1000000);
+    let team_props_cache = Arc::new(team_props_cache);
 
     let mut handles = Vec::new();
 
@@ -97,6 +99,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             consumer.clone(),
             tx.clone(),
             cache.clone(),
+            team_props_cache.clone(),
         ));
 
         handles.push(handle);

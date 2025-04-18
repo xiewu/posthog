@@ -10,7 +10,7 @@ use metrics_consts::{
     UPDATES_FILTERED_BY_CACHE, UPDATES_PER_EVENT, UPDATES_SEEN, UPDATE_ISSUE_TIME,
     UPDATE_PRODUCER_OFFSET, V2_ISOLATED_DB_SELECTED, WORKER_BLOCKED,
 };
-use types::{Event, Update};
+use types::{Event, TeamCache, Update};
 use v2_batch_ingestion::process_batch_v2;
 
 use ahash::AHashSet;
@@ -201,6 +201,7 @@ pub async fn update_producer_loop(
     consumer: SingleTopicConsumer,
     channel: mpsc::Sender<Update>,
     shared_cache: Arc<Cache<Update, ()>>,
+    _team_props_cache: Arc<TeamCache>,
 ) {
     let mut batch = AHashSet::with_capacity(config.compaction_batch_size);
     let mut last_send = tokio::time::Instant::now();

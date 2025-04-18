@@ -30,6 +30,7 @@ anyhow = { workspace = true }
 thiserror.workspace = true
 regex.workspace = true
 sbbf-rs-safe = "0.3.2"
+fxhash = "0.2.1"
 
 [lints]
 workspace = true

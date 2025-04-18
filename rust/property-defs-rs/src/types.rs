@@ -1,4 +1,10 @@
-use std::{fmt, hash::Hash, str::FromStr, sync::LazyLock};
+use std::{
+    collections::HashSet,
+    fmt,
+    hash::{Hash, Hasher},
+    str::FromStr,
+    sync::LazyLock,
+};
 
 use chrono::{DateTime, Duration, DurationRound, RoundingError, Utc};
 use regex::Regex;
@@ -9,6 +15,10 @@ use tracing::warn;
 use uuid::Uuid;
 
 use crate::metrics_consts::{EVENTS_SKIPPED, UPDATES_ISSUED, UPDATES_SKIPPED};
+
+use fxhash::FxHasher64;
+use quick_cache::sync::Cache;
+use sbbf_rs_safe::Filter;
 
 // We skip updates for events we generate
 pub const EVENTS_WITHOUT_PROPERTIES: [&str; 1] = ["$$plugin_metrics"];
@@ -49,6 +59,80 @@ static DATETIME_PREFIX_REGEX: LazyLock<Regex> = LazyLock::new(|| {
         r#"^(([0-9]{4}[/-][0-2][0-9][/-][0-3][0-9])|([0-2][0-9][/-][0-3][0-9][/-][0-9]{4}))([ T][0-2][0-9]:[0-6][0-9]:[0-6][0-9].*)?$"#
     ).unwrap()
 });
+
+#[derive(Copy, PartialEq, Eq, Hash, Debug, Clone)]
+pub struct TeamKey {
+    team_id: i64,
+    prop_type: PropertyParentType,
+}
+
+pub struct TeamCache {
+    // cache Bloom filters of known event properties
+    // by "team key" (team_id, ParentPropertyType)
+    cache: Cache<TeamKey, Filter>,
+    filter_bits_per_key: usize,
+    filter_num_keys: usize,
+
+    // a set of "team keys" representing Bloom filters
+    // that have been updated to include newly seen
+    // event properties, and should be persisted to DB
+    // TODO: something more clever than this!
+    updated: HashSet<TeamKey>,
+}
+
+impl TeamCache {
+    pub fn new(items_capacity: usize, bits_per_key: usize, num_keys: usize) -> Self {
+        Self {
+            cache: Cache::new(items_capacity),
+            filter_bits_per_key: bits_per_key,
+            filter_num_keys: num_keys,
+            updated: HashSet::new(),
+        }
+    }
+
+    // checks if the given event property is known to the system already.
+    // if true, the property needn't be persisted to the DB again. if false,
+    // the property should be persisted and the local Bloom filter updated,
+    // and eventually persisted to the database again
+    pub fn is_known(
+        &mut self,
+        team_id: i64,
+        prop_type: PropertyParentType,
+        event_name: &str,
+        prop_name: &str,
+    ) -> bool {
+        let key = TeamKey { team_id, prop_type };
+        let hasher = {
+            let mut hasher = FxHasher64::default();
+            hasher.write(event_name.as_bytes());
+            hasher.write(prop_name.as_bytes());
+            hasher
+        };
+
+        let (mut filter, is_new) = match self.cache.get(&key) {
+            Some(filter) => (filter, false),
+            None => (
+                Filter::new(self.filter_bits_per_key, self.filter_num_keys),
+                true,
+            ),
+        };
+
+        let data = hasher.finish();
+        let found = if !filter.contains_hash(data) {
+            filter.insert_hash(data);
+            self.updated.insert(key);
+            false
+        } else {
+            true
+        };
+
+        if is_new {
+            self.cache.insert(key, filter);
+        }
+
+        found
+    }
+}
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash, PartialOrd, Ord)]
 pub enum PropertyParentType {
