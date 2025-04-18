@@ -29,6 +29,7 @@ rand = { workspace = true }
 anyhow = { workspace = true }
 thiserror.workspace = true
 regex.workspace = true
+sbbf-rs-safe = "0.3.2"
 
 [lints]
 workspace = true

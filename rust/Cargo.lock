@@ -2220,6 +2220,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "486f806e73c5707928240ddc295403b1b93c96a02038563881c4a2fd84b81ac4"
 
 [[package]]
+name = "fastrange-rs"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e90a1392cd6ec5ebe42ccaf251f2b7ba6be654c377f05c913f3898bfb2172512"
+
+[[package]]
 name = "feature-flags"
 version = "0.1.0"
 dependencies = [
@@ -4604,6 +4610,7 @@ dependencies = [
  "quick_cache",
  "rand",
  "regex",
+ "sbbf-rs-safe",
  "serde",
  "serde_json",
  "serve-metrics",
@@ -5297,6 +5304,25 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "93fc1dc3aaa9bfed95e02e6eadabb4baf7e3078b0bd1b4d7b6b0b68378900502"
 dependencies = [
  "winapi-util",
+]
+
+[[package]]
+name = "sbbf-rs"
+version = "0.2.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5525db49c7719816ac719ea8ffd0d0b4586db1a3f5d3e7751593230dacc642fd"
+dependencies = [
+ "cpufeatures",
+ "fastrange-rs",
+]
+
+[[package]]
+name = "sbbf-rs-safe"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9902ffeb2cff3f8c072c60c7d526ac9560fc9a66fe1dfc3c240eba5e2151ba3c"
+dependencies = [
+ "sbbf-rs",
 ]
 
 [[package]]
