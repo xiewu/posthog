@@ -1,6 +1,7 @@
 use property_filter::{
     config::Config,
     app::Context,
+    worker::filter_builder,
 };
 
 use health::{HealthHandle, HealthRegistry};
@@ -61,10 +62,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 async fn index() -> &'static str {
     "property definitions filter builder service"
-}
-
-async fn filter_builder(_ctx: Arc<Context>) {
-    // TODO: implement this in it's own file
 }
 
 fn start_server(ctx: Arc<Context>) -> JoinHandle<()> {
