@@ -25,6 +25,7 @@ members = [
     "cymbal",
     "common/geoip",
     "common/hogvm",
+    "property_filter",
 ]
 
 [workspace.lints.rust]
@@ -108,6 +109,8 @@ mockall = "0.13.0"
 moka = { version = "0.12.8", features = ["sync", "future"] }
 posthog-rs = { version = "0.3.5", features = ["async-client"] }
 regex = "1.11.1"
+qp-trie = "0.8.2"
+fxhash =  "0.2.1"
 
 # Used for decrypting django encrypted fields
 fernet = "0.2"
