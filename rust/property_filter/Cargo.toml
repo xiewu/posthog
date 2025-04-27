@@ -20,6 +20,7 @@ anyhow = { workspace = true }
 tokio = { workspace = true }
 axum = { workspace = true }
 envconfig = { workspace = true }
+rand = { workspace = true }
 
 [lints]
 workspace = true

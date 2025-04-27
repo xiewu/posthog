@@ -4637,6 +4637,7 @@ dependencies = [
  "health",
  "metrics",
  "qp-trie",
+ "rand",
  "serde",
  "serve-metrics",
  "sqlx",
