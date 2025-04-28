@@ -21,6 +21,7 @@ tokio = { workspace = true }
 axum = { workspace = true }
 envconfig = { workspace = true }
 rand = { workspace = true }
+chrono = { workspace = true }
 
 [lints]
 workspace = true

@@ -1,12 +1,14 @@
+use std::fmt;
 use std::sync::Arc;
 use std::time::Duration;
+use chrono::{DateTime, Utc};
 
 use crate::app::Context;
 
 use tracing::{error, warn};
 
 use qp_trie::{wrapper::BString, Trie};
-use serde::Deserialize;
+use serde::{Serialize, Deserialize};
 use sqlx::{postgres::PgRow, FromRow};
 
 // metrics keys
@@ -24,7 +26,22 @@ const BATCH_FETCH_SIZE: i64 = 1000;
 const BATCH_RETRY_DELAY_MS: u64 = 100;
 const MAX_BATCH_FETCH_ATTEMPTS: u64 = 5;
 
-#[derive(Clone, Debug, Eq, PartialEq, Hash, PartialOrd, Ord, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, FromRow, PartialEq, Eq, Hash)]
+struct FilterRow {
+    // the team this filter represents
+    team_id: i64,
+    // the raw bytes of the serialized trie
+    trie_bytes: Option<Vec<u8>>,
+    // number of property definitions recorded in the trie
+    property_count: i32,
+    // is this team prohibited from defining any more properties?
+    blocked: bool,
+    // timestamps for the filter update cron to use to know which teams
+    // need the filter to be crawled and updated with new records
+    last_updated_at: DateTime<Utc>
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
 struct TrieEntry {
     property_type: char,
     group_type_index: char,
@@ -45,7 +62,7 @@ impl TrieEntry {
     pub fn from_row(row: PropertyRow) -> Self {
         let group_type_index_resolved: char = row
             .group_type_index
-            .map_or('_', |gti| char::from_digit(gti as u32, 10).unwrap());
+            .map_or('X', |gti| char::from_digit(gti as u32, 10).unwrap());
 
         Self::new(
             row.name,
@@ -53,12 +70,16 @@ impl TrieEntry {
             group_type_index_resolved,
         )
     }
+}
 
-    // TODO(eli): implement fmt::Display instead
-    pub fn to_key(&self) -> String {
-        format!(
+// used to create qp_trie::BString keys for Trie insertion
+impl fmt::Display for TrieEntry {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f,
             "{}{}{}",
-            self.property_type, self.group_type_index, self.property_name
+            self.property_type,
+            self.group_type_index,
+            self.property_name
         )
     }
 }
@@ -71,25 +92,28 @@ struct PropertyRow {
     group_type_index: Option<i8>,
 }
 
-pub async fn filter_builder(ctx: Arc<Context>, team_id: i64) {
+pub async fn filter_builder(ctx: Arc<Context>, mut filter: FilterRow) {
     let mut offset: i64 = 0;
-    let mut trie: Trie<BString, ()> = Trie::new();
-
+    let mut trie: Trie<BString, ()> = if filter.trie_bytes.is_none() {
+            Trie::new()
+        } else {
+            Trie::from(filter.trie_bytes.unwrap())
+        };
     loop {
         if offset >= TEAM_PROPDEFS_CAP {
             warn!(
                 "Filter construction for team {} has exceeded {} properties; marking as blocked",
-                team_id, TEAM_PROPDEFS_CAP
+                filter.team_id, TEAM_PROPDEFS_CAP
             );
             // TODO(eli): upsert posthog_propdeffilter row for this team to mark as blocked
         }
 
-        match get_next_batch(&ctx, team_id, offset).await {
+        match get_next_batch(&ctx, filter.team_id, offset).await {
             Ok(rows) => {
                 for row in &rows {
                     let pd_row = PropertyRow::from_row(row).unwrap();
                     let entry = TrieEntry::from_row(pd_row);
-                    trie.insert_str(&entry.to_key(), ());
+                    trie.insert_str(&entry.to_string(), ());
                 }
 
                 // if we've processed all the rows, we're done
