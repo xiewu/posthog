@@ -469,6 +469,7 @@
       distinct_id VARCHAR,
       first_timestamp DateTime64(6, 'UTC'),
       last_timestamp DateTime64(6, 'UTC'),
+      block_url Nullable(String),
       first_url Nullable(VARCHAR),
       urls Array(String),
       click_count Int64,
@@ -482,7 +483,24 @@
       event_count Int64,
       message_count Int64,
       snapshot_source LowCardinality(Nullable(String)),
-      snapshot_library Nullable(String)
+      snapshot_library Nullable(String),
+      -- Secondary columns for v2 migration
+      first_timestamp_secondary Nullable(DateTime64(6, 'UTC')),
+      last_timestamp_secondary Nullable(DateTime64(6, 'UTC')),
+      first_url_secondary Nullable(VARCHAR),
+      urls_secondary Array(String),
+      click_count_secondary Int64,
+      keypress_count_secondary Int64,
+      mouse_activity_count_secondary Int64,
+      active_milliseconds_secondary Int64,
+      console_log_count_secondary Int64,
+      console_warn_count_secondary Int64,
+      console_error_count_secondary Int64,
+      size_secondary Int64,
+      event_count_secondary Int64,
+      message_count_secondary Int64,
+      snapshot_source_secondary Nullable(String),
+      snapshot_library_secondary Nullable(String)
   ) ENGINE = Kafka('test.kafka.broker:9092', 'clickhouse_session_replay_events_test', 'group1', 'JSONEachRow')
   
   '''
@@ -1535,6 +1553,7 @@
       distinct_id VARCHAR,
       first_timestamp DateTime64(6, 'UTC'),
       last_timestamp DateTime64(6, 'UTC'),
+      block_url Nullable(String),
       first_url Nullable(VARCHAR),
       urls Array(String),
       click_count Int64,
@@ -1548,7 +1567,24 @@
       event_count Int64,
       message_count Int64,
       snapshot_source LowCardinality(Nullable(String)),
-      snapshot_library Nullable(String)
+      snapshot_library Nullable(String),
+      -- Secondary columns for v2 migration
+      first_timestamp_secondary Nullable(DateTime64(6, 'UTC')),
+      last_timestamp_secondary Nullable(DateTime64(6, 'UTC')),
+      first_url_secondary Nullable(VARCHAR),
+      urls_secondary Array(String),
+      click_count_secondary Int64,
+      keypress_count_secondary Int64,
+      mouse_activity_count_secondary Int64,
+      active_milliseconds_secondary Int64,
+      console_log_count_secondary Int64,
+      console_warn_count_secondary Int64,
+      console_error_count_secondary Int64,
+      size_secondary Int64,
+      event_count_secondary Int64,
+      message_count_secondary Int64,
+      snapshot_source_secondary Nullable(String),
+      snapshot_library_secondary Nullable(String)
   ) ENGINE = Kafka('kafka:9092', 'clickhouse_session_replay_events_test', 'group1', 'JSONEachRow')
   
   '''
@@ -2308,7 +2344,28 @@
       snapshot_source AggregateFunction(argMin, LowCardinality(Nullable(String)), DateTime64(6, 'UTC')),
       -- knowing something is mobile isn't enough, we need to know if e.g. RN or flutter
       snapshot_library AggregateFunction(argMin, Nullable(String), DateTime64(6, 'UTC')),
-      _timestamp SimpleAggregateFunction(max, DateTime)
+      _timestamp SimpleAggregateFunction(max, DateTime),
+      -- Block columns for v2 migration
+      block_first_timestamps SimpleAggregateFunction(groupArrayArray, Array(DateTime64(6, 'UTC'))),
+      block_last_timestamps SimpleAggregateFunction(groupArrayArray, Array(DateTime64(6, 'UTC'))),
+      block_urls SimpleAggregateFunction(groupArrayArray, Array(String)),
+      -- Secondary columns for v2 migration
+      min_first_timestamp_secondary SimpleAggregateFunction(min, Nullable(DateTime64(6, 'UTC'))),
+      max_last_timestamp_secondary SimpleAggregateFunction(max, Nullable(DateTime64(6, 'UTC'))),
+      first_url_secondary AggregateFunction(argMin, Nullable(VARCHAR), Nullable(DateTime64(6, 'UTC'))),
+      all_urls_secondary SimpleAggregateFunction(groupUniqArrayArray, Array(String)),
+      click_count_secondary SimpleAggregateFunction(sum, Int64),
+      keypress_count_secondary SimpleAggregateFunction(sum, Int64),
+      mouse_activity_count_secondary SimpleAggregateFunction(sum, Int64),
+      active_milliseconds_secondary SimpleAggregateFunction(sum, Int64),
+      console_log_count_secondary SimpleAggregateFunction(sum, Int64),
+      console_warn_count_secondary SimpleAggregateFunction(sum, Int64),
+      console_error_count_secondary SimpleAggregateFunction(sum, Int64),
+      size_secondary SimpleAggregateFunction(sum, Int64),
+      message_count_secondary SimpleAggregateFunction(sum, Int64),
+      event_count_secondary SimpleAggregateFunction(sum, Int64),
+      snapshot_source_secondary AggregateFunction(argMin, Nullable(String), Nullable(DateTime64(6, 'UTC'))),
+      snapshot_library_secondary AggregateFunction(argMin, Nullable(String), Nullable(DateTime64(6, 'UTC')))
   ) ENGINE = Distributed('posthog', 'posthog_test', 'sharded_session_replay_events', sipHash64(distinct_id))
   
   '''
@@ -2321,6 +2378,9 @@
   `session_id` String, `team_id` Int64, `distinct_id` String,
   `min_first_timestamp` DateTime64(6, 'UTC'),
   `max_last_timestamp` DateTime64(6, 'UTC'),
+  `block_first_timestamps` SimpleAggregateFunction(groupArrayArray, Array(DateTime64(6, 'UTC'))),
+  `block_last_timestamps` SimpleAggregateFunction(groupArrayArray, Array(DateTime64(6, 'UTC'))),
+  `block_urls` SimpleAggregateFunction(groupArrayArray, Array(String)),
   `first_url` AggregateFunction(argMin, Nullable(String), DateTime64(6, 'UTC')),
   `all_urls` SimpleAggregateFunction(groupUniqArrayArray, Array(String)),
   `click_count` Int64, `keypress_count` Int64,
@@ -2330,7 +2390,24 @@
   `event_count` Int64,
   `snapshot_source` AggregateFunction(argMin, LowCardinality(Nullable(String)), DateTime64(6, 'UTC')),
   `snapshot_library` AggregateFunction(argMin, Nullable(String), DateTime64(6, 'UTC')),
-  `_timestamp` Nullable(DateTime)
+  `_timestamp` Nullable(DateTime),
+  -- Secondary columns for v2 migration
+  `min_first_timestamp_secondary` Nullable(DateTime64(6, 'UTC')),
+  `max_last_timestamp_secondary` Nullable(DateTime64(6, 'UTC')),
+  `first_url_secondary` AggregateFunction(argMin, Nullable(String), Nullable(DateTime64(6, 'UTC'))),
+  `all_urls_secondary` SimpleAggregateFunction(groupUniqArrayArray, Array(String)),
+  `click_count_secondary` Int64,
+  `keypress_count_secondary` Int64,
+  `mouse_activity_count_secondary` Int64,
+  `active_milliseconds_secondary` Int64,
+  `console_log_count_secondary` Int64,
+  `console_warn_count_secondary` Int64,
+  `console_error_count_secondary` Int64,
+  `size_secondary` Int64,
+  `message_count_secondary` Int64,
+  `event_count_secondary` Int64,
+  `snapshot_source_secondary` AggregateFunction(argMin, Nullable(String), Nullable(DateTime64(6, 'UTC'))),
+  `snapshot_library_secondary` AggregateFunction(argMin, Nullable(String), Nullable(DateTime64(6, 'UTC')))
   )
   AS SELECT
   session_id,
@@ -2338,6 +2415,9 @@
   any(distinct_id) as distinct_id,
   min(first_timestamp) AS min_first_timestamp,
   max(last_timestamp) AS max_last_timestamp,
+  groupArray(if(block_url != '', first_timestamp, NULL)) AS block_first_timestamps,
+  groupArray(if(block_url != '', last_timestamp, NULL)) AS block_last_timestamps,
+  groupArray(block_url) AS block_urls,
   -- TRICKY: ClickHouse will pick a relatively random first_url
   -- when it collapses the aggregating merge tree
   -- unless we teach it what we want...
@@ -2362,7 +2442,24 @@
   sum(event_count) as event_count,
   argMinState(snapshot_source, first_timestamp) as snapshot_source,
   argMinState(snapshot_library, first_timestamp) as snapshot_library,
-  max(_timestamp) as _timestamp
+  max(_timestamp) as _timestamp,
+  -- Secondary columns for v2 migration
+  min(first_timestamp_secondary) AS min_first_timestamp_secondary,
+  max(last_timestamp_secondary) AS max_last_timestamp_secondary,
+  argMinState(first_url_secondary, first_timestamp_secondary) as first_url_secondary,
+  groupUniqArrayArray(urls_secondary) as all_urls_secondary,
+  sum(click_count_secondary) as click_count_secondary,
+  sum(keypress_count_secondary) as keypress_count_secondary,
+  sum(mouse_activity_count_secondary) as mouse_activity_count_secondary,
+  sum(active_milliseconds_secondary) as active_milliseconds_secondary,
+  sum(console_log_count_secondary) as console_log_count_secondary,
+  sum(console_warn_count_secondary) as console_warn_count_secondary,
+  sum(console_error_count_secondary) as console_error_count_secondary,
+  sum(size_secondary) as size_secondary,
+  sum(message_count_secondary) as message_count_secondary,
+  sum(event_count_secondary) as event_count_secondary,
+  argMinState(snapshot_source_secondary, first_timestamp_secondary) as snapshot_source_secondary,
+  argMinState(snapshot_library_secondary, first_timestamp_secondary) as snapshot_library_secondary
   FROM posthog_test.kafka_session_replay_events
   group by session_id, team_id
   
@@ -3011,7 +3108,28 @@
       snapshot_source AggregateFunction(argMin, LowCardinality(Nullable(String)), DateTime64(6, 'UTC')),
       -- knowing something is mobile isn't enough, we need to know if e.g. RN or flutter
       snapshot_library AggregateFunction(argMin, Nullable(String), DateTime64(6, 'UTC')),
-      _timestamp SimpleAggregateFunction(max, DateTime)
+      _timestamp SimpleAggregateFunction(max, DateTime),
+      -- Block columns for v2 migration
+      block_first_timestamps SimpleAggregateFunction(groupArrayArray, Array(DateTime64(6, 'UTC'))),
+      block_last_timestamps SimpleAggregateFunction(groupArrayArray, Array(DateTime64(6, 'UTC'))),
+      block_urls SimpleAggregateFunction(groupArrayArray, Array(String)),
+      -- Secondary columns for v2 migration
+      min_first_timestamp_secondary SimpleAggregateFunction(min, Nullable(DateTime64(6, 'UTC'))),
+      max_last_timestamp_secondary SimpleAggregateFunction(max, Nullable(DateTime64(6, 'UTC'))),
+      first_url_secondary AggregateFunction(argMin, Nullable(VARCHAR), Nullable(DateTime64(6, 'UTC'))),
+      all_urls_secondary SimpleAggregateFunction(groupUniqArrayArray, Array(String)),
+      click_count_secondary SimpleAggregateFunction(sum, Int64),
+      keypress_count_secondary SimpleAggregateFunction(sum, Int64),
+      mouse_activity_count_secondary SimpleAggregateFunction(sum, Int64),
+      active_milliseconds_secondary SimpleAggregateFunction(sum, Int64),
+      console_log_count_secondary SimpleAggregateFunction(sum, Int64),
+      console_warn_count_secondary SimpleAggregateFunction(sum, Int64),
+      console_error_count_secondary SimpleAggregateFunction(sum, Int64),
+      size_secondary SimpleAggregateFunction(sum, Int64),
+      message_count_secondary SimpleAggregateFunction(sum, Int64),
+      event_count_secondary SimpleAggregateFunction(sum, Int64),
+      snapshot_source_secondary AggregateFunction(argMin, Nullable(String), Nullable(DateTime64(6, 'UTC'))),
+      snapshot_library_secondary AggregateFunction(argMin, Nullable(String), Nullable(DateTime64(6, 'UTC')))
   ) ENGINE = ReplicatedAggregatingMergeTree('/clickhouse/tables/77f1df52-4b43-11e9-910f-b8ca3a9b9f3e_{shard}/posthog.session_replay_events', '{replica}')
   
       PARTITION BY toYYYYMM(min_first_timestamp)
@@ -4294,7 +4412,28 @@
       snapshot_source AggregateFunction(argMin, LowCardinality(Nullable(String)), DateTime64(6, 'UTC')),
       -- knowing something is mobile isn't enough, we need to know if e.g. RN or flutter
       snapshot_library AggregateFunction(argMin, Nullable(String), DateTime64(6, 'UTC')),
-      _timestamp SimpleAggregateFunction(max, DateTime)
+      _timestamp SimpleAggregateFunction(max, DateTime),
+      -- Block columns for v2 migration
+      block_first_timestamps SimpleAggregateFunction(groupArrayArray, Array(DateTime64(6, 'UTC'))),
+      block_last_timestamps SimpleAggregateFunction(groupArrayArray, Array(DateTime64(6, 'UTC'))),
+      block_urls SimpleAggregateFunction(groupArrayArray, Array(String)),
+      -- Secondary columns for v2 migration
+      min_first_timestamp_secondary SimpleAggregateFunction(min, Nullable(DateTime64(6, 'UTC'))),
+      max_last_timestamp_secondary SimpleAggregateFunction(max, Nullable(DateTime64(6, 'UTC'))),
+      first_url_secondary AggregateFunction(argMin, Nullable(VARCHAR), Nullable(DateTime64(6, 'UTC'))),
+      all_urls_secondary SimpleAggregateFunction(groupUniqArrayArray, Array(String)),
+      click_count_secondary SimpleAggregateFunction(sum, Int64),
+      keypress_count_secondary SimpleAggregateFunction(sum, Int64),
+      mouse_activity_count_secondary SimpleAggregateFunction(sum, Int64),
+      active_milliseconds_secondary SimpleAggregateFunction(sum, Int64),
+      console_log_count_secondary SimpleAggregateFunction(sum, Int64),
+      console_warn_count_secondary SimpleAggregateFunction(sum, Int64),
+      console_error_count_secondary SimpleAggregateFunction(sum, Int64),
+      size_secondary SimpleAggregateFunction(sum, Int64),
+      message_count_secondary SimpleAggregateFunction(sum, Int64),
+      event_count_secondary SimpleAggregateFunction(sum, Int64),
+      snapshot_source_secondary AggregateFunction(argMin, Nullable(String), Nullable(DateTime64(6, 'UTC'))),
+      snapshot_library_secondary AggregateFunction(argMin, Nullable(String), Nullable(DateTime64(6, 'UTC')))
   ) ENGINE = ReplicatedAggregatingMergeTree('/clickhouse/tables/77f1df52-4b43-11e9-910f-b8ca3a9b9f3e_{shard}/posthog.session_replay_events', '{replica}')
   
       PARTITION BY toYYYYMM(min_first_timestamp)
