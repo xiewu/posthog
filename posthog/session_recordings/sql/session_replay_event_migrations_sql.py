@@ -210,7 +210,7 @@ ALTER_SESSION_REPLAY_ADD_SECONDARY_COLUMNS = """
         ADD COLUMN IF NOT EXISTS size_secondary SimpleAggregateFunction(sum, Int64),
         ADD COLUMN IF NOT EXISTS message_count_secondary SimpleAggregateFunction(sum, Int64),
         ADD COLUMN IF NOT EXISTS event_count_secondary SimpleAggregateFunction(sum, Int64),
-        ADD COLUMN IF NOT EXISTS snapshot_source_secondary AggregateFunction(argMin, LowCardinality(Nullable(String)), Nullable(DateTime64(6, 'UTC'))),
+        ADD COLUMN IF NOT EXISTS snapshot_source_secondary AggregateFunction(argMin, Nullable(String), Nullable(DateTime64(6, 'UTC'))),
         ADD COLUMN IF NOT EXISTS snapshot_library_secondary AggregateFunction(argMin, Nullable(String), Nullable(DateTime64(6, 'UTC')))
 """
 

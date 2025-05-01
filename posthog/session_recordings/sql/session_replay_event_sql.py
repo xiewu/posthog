@@ -57,7 +57,7 @@ CREATE TABLE IF NOT EXISTS {table_name} {on_cluster_clause}
     size_secondary Int64,
     event_count_secondary Int64,
     message_count_secondary Int64,
-    snapshot_source_secondary LowCardinality(Nullable(String)),
+    snapshot_source_secondary Nullable(String),
     snapshot_library_secondary Nullable(String)
 ) ENGINE = {engine}
 """
@@ -122,7 +122,7 @@ CREATE TABLE IF NOT EXISTS {table_name} {on_cluster_clause}
     size_secondary SimpleAggregateFunction(sum, Int64),
     message_count_secondary SimpleAggregateFunction(sum, Int64),
     event_count_secondary SimpleAggregateFunction(sum, Int64),
-    snapshot_source_secondary AggregateFunction(argMin, LowCardinality(Nullable(String)), Nullable(DateTime64(6, 'UTC'))),
+    snapshot_source_secondary AggregateFunction(argMin, Nullable(String), Nullable(DateTime64(6, 'UTC'))),
     snapshot_library_secondary AggregateFunction(argMin, Nullable(String), Nullable(DateTime64(6, 'UTC')))
 ) ENGINE = {engine}
 """
@@ -261,7 +261,7 @@ group by session_id, team_id
 `size_secondary` Int64,
 `message_count_secondary` Int64,
 `event_count_secondary` Int64,
-`snapshot_source_secondary` AggregateFunction(argMin, LowCardinality(Nullable(String)), Nullable(DateTime64(6, 'UTC'))),
+`snapshot_source_secondary` AggregateFunction(argMin, Nullable(String), Nullable(DateTime64(6, 'UTC'))),
 `snapshot_library_secondary` AggregateFunction(argMin, Nullable(String), Nullable(DateTime64(6, 'UTC')))
 )""",
     )
