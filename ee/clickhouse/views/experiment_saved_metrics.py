@@ -2,7 +2,11 @@ import pydantic
 from django.db.models.functions import Lower
 from rest_framework import serializers, viewsets
 from rest_framework.exceptions import ValidationError
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from rest_framework import status
 
+from ee.clickhouse.views.convert_legacy_metric import convert_legacy_metric
 
 from posthog.api.routing import TeamAndOrgViewSetMixin
 from posthog.api.shared import UserBasicSerializer
@@ -96,6 +100,46 @@ class ExperimentSavedMetricSerializer(TaggedItemSerializerMixin, serializers.Mod
         validated_data["created_by"] = request.user
         validated_data["team_id"] = self.context["team_id"]
         return super().create(validated_data)
+
+    @action(detail=True, methods=["POST"])
+    def migrate(self, request, *args, **kwargs):
+        original_metric = self.get_object()
+
+        # Check if already migrated using the queryset from parent class
+        existing_migration = (
+            super().get_queryset().filter(team_id=original_metric.team_id, query__has_key="legacy_id").first()
+        )
+
+        if existing_migration:
+            return Response(
+                {"error": "Metric already migrated", "migrated_metric_id": existing_migration.id},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Convert legacy query and add legacy_id
+        new_query = convert_legacy_metric(original_metric.query)
+        new_query["legacy_id"] = original_metric.id
+
+        # Prepare data for serializer
+        data = {
+            "name": original_metric.name,
+            "description": original_metric.description,
+            "query": new_query,
+        }
+
+        # Create new metric
+        serializer = self.get_serializer(
+            data=data,
+            context={
+                **self.get_serializer_context(),
+                "team_id": original_metric.team_id,
+                "request": request,
+            },
+        )
+        serializer.is_valid(raise_exception=True)
+        new_metric = serializer.save()
+
+        return Response(self.get_serializer(new_metric).data, status=status.HTTP_201_CREATED)
 
 
 class ExperimentSavedMetricViewSet(TeamAndOrgViewSetMixin, viewsets.ModelViewSet):

@@ -287,3 +287,98 @@ class TestExperimentSavedMetricsCRUD(APILicensedTest):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.json()["detail"], "Query is required to create a saved metric")
+
+    def test_migrate_saved_metric_success(self):
+        # Create a legacy metric
+        response = self.client.post(
+            f"/api/projects/{self.team.id}/experiment_saved_metrics/",
+            data={
+                "name": "Legacy Metric",
+                "description": "Legacy metric for migration",
+                "query": {
+                    "kind": "ExperimentTrendsQuery",
+                    "count_query": {"kind": "TrendsQuery", "series": [{"kind": "EventsNode", "event": "$pageview"}]},
+                },
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        legacy_metric_id = response.json()["id"]
+
+        # Migrate the legacy metric
+        migrate_response = self.client.post(
+            f"/api/projects/{self.team.id}/experiment_saved_metrics/{legacy_metric_id}/migrate/"
+        )
+        self.assertEqual(migrate_response.status_code, status.HTTP_201_CREATED)
+        migrated_metric = migrate_response.json()
+        self.assertEqual(migrated_metric["name"], "Legacy Metric")
+        self.assertEqual(migrated_metric["description"], "Legacy metric for migration")
+        self.assertEqual(migrated_metric["query"]["kind"], "ExperimentMetric")
+        self.assertEqual(migrated_metric["query"]["metric_type"], "mean")
+        self.assertEqual(migrated_metric["query"]["legacy_id"], legacy_metric_id)
+
+    def test_migrate_saved_metric_already_migrated(self):
+        # Create a legacy metric
+        response = self.client.post(
+            f"/api/projects/{self.team.id}/experiment_saved_metrics/",
+            data={
+                "name": "Legacy Metric",
+                "description": "Legacy metric for migration",
+                "query": {
+                    "kind": "ExperimentTrendsQuery",
+                    "count_query": {"kind": "TrendsQuery", "series": [{"kind": "EventsNode", "event": "$pageview"}]},
+                },
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        legacy_metric_id = response.json()["id"]
+
+        # First migration
+        migrate_response = self.client.post(
+            f"/api/projects/{self.team.id}/experiment_saved_metrics/{legacy_metric_id}/migrate/"
+        )
+        self.assertEqual(migrate_response.status_code, status.HTTP_201_CREATED)
+        migrated_metric_id = migrate_response.json()["id"]
+
+        # Second migration should fail
+        migrate_response_2 = self.client.post(
+            f"/api/projects/{self.team.id}/experiment_saved_metrics/{legacy_metric_id}/migrate/"
+        )
+        self.assertEqual(migrate_response_2.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(migrate_response_2.json()["error"], "Metric already migrated")
+        self.assertEqual(migrate_response_2.json()["migrated_metric_id"], migrated_metric_id)
+
+    def test_migrate_saved_metric_with_funnel_query(self):
+        # Create a legacy funnel metric
+        response = self.client.post(
+            f"/api/projects/{self.team.id}/experiment_saved_metrics/",
+            data={
+                "name": "Legacy Funnel Metric",
+                "description": "Legacy funnel metric for migration",
+                "query": {
+                    "kind": "ExperimentFunnelsQuery",
+                    "funnels_query": {
+                        "series": [
+                            {"kind": "EventsNode", "event": "step1", "name": "Step 1"},
+                            {"kind": "EventsNode", "event": "step2", "name": "Step 2"},
+                        ]
+                    },
+                },
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        legacy_metric_id = response.json()["id"]
+
+        # Migrate the legacy funnel metric
+        migrate_response = self.client.post(
+            f"/api/projects/{self.team.id}/experiment_saved_metrics/{legacy_metric_id}/migrate/"
+        )
+        self.assertEqual(migrate_response.status_code, status.HTTP_201_CREATED)
+        migrated_metric = migrate_response.json()
+        self.assertEqual(migrated_metric["query"]["kind"], "ExperimentMetric")
+        self.assertEqual(migrated_metric["query"]["metric_type"], "funnel")
+        self.assertEqual(migrated_metric["query"]["legacy_id"], legacy_metric_id)
+        self.assertIn("series", migrated_metric["query"])
+        self.assertNotIn("name", migrated_metric["query"]["series"][0])
