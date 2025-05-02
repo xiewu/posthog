@@ -246,7 +246,15 @@ field_exclusions: dict[ActivityScope, list[str]] = {
         "post_to_slack",
         "property_type_format",
     ],
-    "Team": ["uuid", "updated_at", "api_token", "created_at", "id"],
+    "Team": [
+        "uuid",
+        "updated_at",
+        "api_token",
+        "created_at",
+        "id",
+        "secret_api_token",
+        "secret_api_token_backup",
+    ],
     "Project": ["id", "created_at"],
     "DataWarehouseSavedQuery": [
         "name",
