@@ -32,6 +32,7 @@ import { activationLogic, ActivationTask } from '~/layout/navigation-3000/sidepa
 import { refreshTreeItem } from '~/layout/panel-layout/ProjectTree/projectTreeLogic'
 import { cohortsModel } from '~/models/cohortsModel'
 import { groupsModel } from '~/models/groupsModel'
+import { dataNodeLogic } from '~/queries/nodes/DataNode/dataNodeLogic'
 import { performQuery, QUERY_TIMEOUT_ERROR_MESSAGE } from '~/queries/query'
 import {
     AnyEntityNode,
@@ -190,7 +191,7 @@ export const experimentLogic = kea<experimentLogicType>([
     props({} as ExperimentLogicProps),
     key((props) => props.experimentId || 'new'),
     path((key) => ['scenes', 'experiment', 'experimentLogic', key]),
-    connect(() => ({
+    connect((props: ExperimentLogicProps) => ({
         values: [
             projectLogic,
             ['currentProjectId'],
@@ -214,6 +215,11 @@ export const experimentLogic = kea<experimentLogicType>([
             ['insightDataLoading as funnelMetricInsightLoading'],
             sharedMetricsLogic,
             ['sharedMetrics'],
+            dataNodeLogic({
+                key: `experiment-${props.experimentId}-exposures`,
+                query: { kind: NodeKind.ExperimentExposureQuery, experiment_id: props.experimentId },
+            }),
+            ['queryId', 'pollResponse'],
         ],
         actions: [
             experimentsLogic,

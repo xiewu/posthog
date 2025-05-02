@@ -4,8 +4,11 @@ import { Chart, ChartConfiguration } from 'chart.js/auto'
 import clsx from 'clsx'
 import { useActions, useValues } from 'kea'
 import { getSeriesBackgroundColor, getSeriesColor } from 'lib/colors'
+import { FEATURE_FLAGS } from 'lib/constants'
+import { featureFlagLogic } from 'lib/logic/featureFlagLogic'
 import { humanFriendlyNumber } from 'lib/utils'
 import { useEffect, useRef } from 'react'
+import { StatelessInsightLoadingState } from 'scenes/insights/EmptyStates'
 
 import { ExperimentExposureCriteria } from '~/queries/schema/schema-general'
 
@@ -22,7 +25,10 @@ function getExposureCriteriaLabel(exposureCriteria: ExperimentExposureCriteria |
 }
 
 export function Exposures(): JSX.Element {
-    const { experimentId, exposures, exposuresLoading, exposureCriteria } = useValues(experimentLogic)
+    const { experimentId, exposures, exposuresLoading, exposureCriteria, queryId, pollResponse } =
+        useValues(experimentLogic)
+    const { featureFlags } = useValues(featureFlagLogic)
+
     const { openExposureCriteriaModal } = useActions(experimentLogic)
 
     const chartRef = useRef<Chart | null>(null)
@@ -114,7 +120,11 @@ export function Exposures(): JSX.Element {
             </div>
             {exposuresLoading ? (
                 <div className={clsx(chartWrapperClasses, 'flex justify-center items-center')}>
-                    <Spinner className="text-5xl" />
+                    {featureFlags[FEATURE_FLAGS.EXPERIMENTS_SHOW_QUERY_PROGRESS] ? (
+                        <StatelessInsightLoadingState queryId={queryId} pollResponse={pollResponse} />
+                    ) : (
+                        <Spinner className="text-5xl" />
+                    )}
                 </div>
             ) : !exposures?.timeseries?.length ? (
                 <div className={clsx(chartWrapperClasses, 'flex justify-center items-center')}>
