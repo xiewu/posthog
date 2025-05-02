@@ -32,6 +32,7 @@ from posthog.models.signals import mutable_receiver
 from posthog.models.utils import (
     UUIDClassicModel,
     generate_random_token_project,
+    generate_random_token_secret,
     sane_repr,
     validate_rate_limit,
 )
@@ -575,6 +576,15 @@ class Team(UUIDClassicModel):
                 )
             )
         return User.objects.filter(is_active=True, id__in=user_ids_queryset)
+
+    def save(self, *args, **kwargs):
+        # This is temporary until we can backfill the tokens for existing teams and
+        # later add a default value to the field.
+        if not self.secret_api_token:
+            self.secret_api_token = generate_random_token_secret()
+        if not self.secret_api_token_backup:
+            self.secret_api_token_backup = generate_random_token_secret()
+        super().save(*args, **kwargs)
 
     def __str__(self):
         if self.name:
